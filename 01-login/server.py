@@ -9,6 +9,11 @@ from authlib.integrations.flask_client import OAuth
 from dotenv import find_dotenv, load_dotenv
 from flask import Flask, redirect, render_template, session, url_for
 
+from functools import wraps
+from flask import abort
+from flask import request
+
+
 ENV_FILE = find_dotenv()
 if ENV_FILE:
     load_dotenv(ENV_FILE)
@@ -69,6 +74,26 @@ def logout():
             quote_via=quote_plus,
         )
     )
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login", next=request.path))
+        return f(*args, **kwargs)
+    return decorated
+
+
+
+@app.route("/protected")
+@requires_auth
+def protected():
+    return render_template(
+        "protected.html",
+        session=session.get("user"),
+        pretty=json.dumps(session.get("user"), indent=4),
+)
+
 
 
 if __name__ == "__main__":
